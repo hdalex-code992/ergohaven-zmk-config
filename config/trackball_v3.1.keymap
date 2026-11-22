@@ -22,8 +22,9 @@
     combos {
         compatible = "zmk,combos";
 
+        /* Короткое нажатие обеих кнопок = СКМ (колёсико), удержание 250 мс = переключить Скролл <-> Запасная мышь */
         base_combo {
-            bindings = <&hold_mo_tap_mkp 1 MB3>;
+            bindings = <&hold_tog_tap_mkp 1 MB3>;
             key-positions = <0 1>;
         };
     };
@@ -53,29 +54,43 @@
             hold-while-undecided;
             hold-while-undecided-linger;
         };
+
+        hold_tog_tap_mkp: hold_tog_tap_mkp {
+            compatible = "zmk,behavior-hold-tap";
+            label = "HOLD_TOG_TAP_MKP";
+            bindings = <&tog>, <&mkp>;
+
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <250>;
+        };
     };
 
     keymap {
         compatible = "zmk,keymap";
 
-        base {
+        /* Слой 0 (активен сразу при включении): постоянный 2D-скролл.
+           После переворота на 180°: позиция 0 = физически ПРАВАЯ кнопка, позиция 1 = физически ЛЕВАЯ кнопка. */
+        scroll_base {
             bindings = <
-&mkp MB1  &hold_mo_tap_mkp 2 MB2
-&adj1     &adj2
-            >;
-
-            display-name = "Base";
-        };
-
-        scroll {
-            bindings = <
-&trans  &trans
-&trans  &trans
+&hold_mo_tap_mkp 1 MB2  &mkp MB1
+&adj1                   &adj2
             >;
 
             display-name = "Scroll";
         };
 
+        /* Слой 1 (включается зажатием обеих кнопок): режим Запасной Мыши */
+        mouse {
+            bindings = <
+&hold_mo_tap_mkp 2 MB2  &mkp MB1
+&trans                  &trans
+            >;
+
+            display-name = "Mouse";
+        };
+
+        /* Слой 2 (удержание правой кнопки в режиме Мыши): Снайпер 1/4 */
         sniper {
             bindings = <
 &trans  &trans
@@ -90,23 +105,20 @@
 &trackball { cpi = <1000>; };
 
 &trackball_listener {
-    input-processors = <&zip_xy_scaler 9 20>;
+    /* По умолчанию (Слой 0): плавный вертикальный и горизонтальный скролл */
+    input-processors =
+        <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
+        <&zip_xy_scaler 1 32>,
+        <&zip_xy_to_scroll_mapper &zip_scroll_snap>;
 
-    scroller {
-        layers = <1>;
-        input-processors =
-            <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
-            <&zip_xy_scaler 1 32>,
-            <&zip_xy_to_scroll_mapper &zip_scroll_snap>;
-    };
-
+    /* Важно: sniper стоит выше mouse, чтобы работать поверх включённого Слоя 1 */
     sniper {
         layers = <2>;
         input-processors = <&zip_xy_scaler 1 4>;
     };
 
-    adjust {
-        layers = <3>;
-        input-processors = <&zip_xy_scaler 1 8>;
+    mouse {
+        layers = <1>;
+        input-processors = <&zip_xy_scaler 9 20>;
     };
 };
