@@ -12,3 +12,7 @@ properties:
     type: int
     default: 200
     description: "Reset fractional remainders after idle timeout in ms"
+
+  track-remainders:
+    type: boolean
+    description: "Whether ZMK input listener tracks remainders for this processor"
