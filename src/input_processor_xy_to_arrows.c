@@ -56,9 +56,10 @@ static K_WORK_DELAYABLE_DEFINE(xy_to_arrows_work, xy_to_arrows_work_cb);
 
 static void enqueue_arrow_tap(uint32_t kc) {
     if (k_msgq_put(&xy_to_arrows_msgq, &kc, K_NO_WAIT) == 0) {
-        if (!k_work_delayable_is_pending(&xy_to_arrows_work)) {
-            k_work_schedule(&xy_to_arrows_work, K_NO_WAIT);
-        }
+        /* k_work_schedule is a spinlock-atomic no-op if already DELAYED or QUEUED,
+         * and properly re-queues if the work callback is currently K_WORK_RUNNING
+         * and about to return after draining msgq. */
+        k_work_schedule(&xy_to_arrows_work, K_NO_WAIT);
     }
 }
 
@@ -88,7 +89,11 @@ static int xy_to_arrows_handle_event(const struct device *dev, struct input_even
     data->last_event_ms = now;
 
     int32_t delta = event->value;
+    bool is_sync = event->sync;
+    /* Consume both value and sync so zmk_input_listener does not transmit
+     * 83 Hz zero-delta BLE GATT mouse reports alongside arrow key taps. */
     event->value = 0;
+    event->sync = false;
 
     if (event->code == INPUT_REL_X) {
         if ((delta > 0 && data->acc_x < 0) || (delta < 0 && data->acc_x > 0)) {
@@ -102,7 +107,7 @@ static int xy_to_arrows_handle_event(const struct device *dev, struct input_even
         data->acc_y += delta;
     }
 
-    if (!event->sync) {
+    if (!is_sync) {
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
