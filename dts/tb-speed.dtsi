@@ -12,7 +12,7 @@
             compatible = "zmk,behavior-tb-speed";
             display-name = "Speed -";
             #binding-cells = <0>;
-            direction = <-1>;
+            direction = <(-1)>;
             hold-reset-ms = <800>;
         };
 
