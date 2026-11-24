@@ -1,0 +1,19 @@
+description: XY relative motion to 4-way arrow key taps input processor
+
+compatible: "zmk,input-processor-xy-to-arrows"
+
+properties:
+  "#input-processor-cells":
+    type: int
+    const: 0
+    description: "Number of cells in input processor specifier"
+
+  threshold:
+    type: int
+    default: 36
+    description: "Accumulated counts required per arrow tap"
+
+  idle-reset-ms:
+    type: int
+    default: 150
+    description: "Reset accumulators after idle timeout in ms"

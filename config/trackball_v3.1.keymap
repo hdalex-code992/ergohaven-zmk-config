@@ -4,8 +4,10 @@
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 #include <dt-bindings/zmk/matrix_transform.h>
 #include <scroll-snap.dtsi>
+#include <xy-to-arrows.dtsi>
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/pointing.h>
 
 / {
@@ -22,10 +24,18 @@
     combos {
         compatible = "zmk,combos";
 
-        /* Короткое нажатие обеих кнопок = СКМ (колёсико), удержание 250 мс = переключить Скролл <-> Запасная мышь */
-        base_combo {
-            bindings = <&hold_tog_tap_mkp 1 MB3>;
+        /* В слоях 0 (SCROLL) и 1 (TEXT): обе кнопки вместе = вход в режим запасной мыши (MOUSE) */
+        combo_to_mouse {
             key-positions = <0 1>;
+            layers = <0 1>;
+            bindings = <&to 2>;
+        };
+
+        /* В слоях 2 (MOUSE) и 3 (SNIPER): клик обеих = СКМ (MB3), удержание 250 мс = возврат в 0 (SCROLL) */
+        combo_mouse_mb3_or_scroll {
+            key-positions = <0 1>;
+            layers = <2 3>;
+            bindings = <&hold_to_tap_mkp 0 MB3>;
         };
     };
 
@@ -55,10 +65,10 @@
             hold-while-undecided-linger;
         };
 
-        hold_tog_tap_mkp: hold_tog_tap_mkp {
+        hold_to_tap_mkp: hold_to_tap_mkp {
             compatible = "zmk,behavior-hold-tap";
-            label = "HOLD_TOG_TAP_MKP";
-            bindings = <&tog>, <&mkp>;
+            label = "HOLD_TO_TAP_MKP";
+            bindings = <&to>, <&mkp>;
 
             #binding-cells = <2>;
             flavor = "tap-preferred";
@@ -69,28 +79,37 @@
     keymap {
         compatible = "zmk,keymap";
 
-        /* Слой 0 (активен сразу при включении): постоянный 2D-скролл.
-           После переворота на 180°: позиция 0 = физически ПРАВАЯ кнопка, позиция 1 = физически ЛЕВАЯ кнопка. */
+        /* Слой 0 (SCROLL, старт): pos 0 (правая кнопка) = &to 0, pos 1 (левая кнопка) = &to 1 (TEXT) */
         scroll_base {
             bindings = <
-&hold_mo_tap_mkp 1 MB2  &mkp MB1
-&adj1                   &adj2
+&to 0  &to 1
+&adj1  &adj2
             >;
 
             display-name = "Scroll";
         };
 
-        /* Слой 1 (включается зажатием обеих кнопок): режим Запасной Мыши */
+        /* Слой 1 (TEXT, 4-way стрелки): pos 0 (правая) = &to 0 (SCROLL), pos 1 (левая) = &to 1 */
+        text_arrows {
+            bindings = <
+&to 0   &to 1
+&trans  &trans
+            >;
+
+            display-name = "Text";
+        };
+
+        /* Слой 2 (MOUSE, запасная мышь): pos 0 (правая) = ПКМ / удержание SNIPER, pos 1 (левая) = ЛКМ */
         mouse {
             bindings = <
-&hold_mo_tap_mkp 2 MB2  &mkp MB1
+&hold_mo_tap_mkp 3 MB2  &mkp MB1
 &trans                  &trans
             >;
 
             display-name = "Mouse";
         };
 
-        /* Слой 2 (удержание правой кнопки в режиме Мыши): Снайпер 1/4 */
+        /* Слой 3 (SNIPER, 1/4 скорости поверх MOUSE) */
         sniper {
             bindings = <
 &trans  &trans
@@ -105,20 +124,27 @@
 &trackball { cpi = <1000>; };
 
 &trackball_listener {
-    /* По умолчанию (Слой 0): плавный вертикальный и горизонтальный скролл */
+    /* По умолчанию (Слой 0: SCROLL): плавный 2D-скролл */
     input-processors =
         <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
         <&zip_xy_scaler 1 32>,
         <&zip_xy_to_scroll_mapper &zip_scroll_snap>;
 
-    /* Важно: sniper стоит выше mouse, чтобы работать поверх включённого Слоя 1 */
+    /* Слой 1 (TEXT): 4-позиционные стрелки с поглощением движения курсора */
+    text {
+        layers = <1>;
+        input-processors = <&zip_xy_to_arrows &zip_xy_scaler 0 1>;
+    };
+
+    /* Важно: sniper (Слой 3) стоит выше mouse (Слой 2), чтобы работать поверх включённого Слоя 2 */
     sniper {
-        layers = <2>;
+        layers = <3>;
         input-processors = <&zip_xy_scaler 1 4>;
     };
 
+    /* Слой 2 (MOUSE): курсор мыши */
     mouse {
-        layers = <1>;
+        layers = <2>;
         input-processors = <&zip_xy_scaler 9 20>;
     };
 };

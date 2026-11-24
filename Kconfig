@@ -1,0 +1,6 @@
+config ZMK_INPUT_PROCESSOR_XY_TO_ARROWS
+	bool "XY to 4-way Arrow Keys Input Processor"
+	default y
+	depends on ZMK_POINTING
+	help
+	  Convert relative X/Y trackball motion into 4-way dominant-axis arrow key taps.

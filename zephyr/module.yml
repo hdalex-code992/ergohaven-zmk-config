@@ -1,0 +1,6 @@
+name: ergohaven-trackball-xy-to-arrows
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .
