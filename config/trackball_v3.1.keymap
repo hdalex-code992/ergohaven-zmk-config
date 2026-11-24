@@ -5,8 +5,8 @@
 #include <dt-bindings/zmk/matrix_transform.h>
 #include <scroll-snap.dtsi>
 #include <xy-to-arrows.dtsi>
+#include <tb-speed.dtsi>
 #include <behaviors.dtsi>
-#include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/pointing.h>
 
@@ -24,7 +24,7 @@
     combos {
         compatible = "zmk,combos";
 
-        /* В слоях 0 (SCROLL) и 1 (TEXT): обе кнопки вместе = вход в режим запасной мыши (MOUSE) */
+        /* В слоях 0 (SCROLL) и 1 (TEXT): обе верхние кнопки вместе = вход в режим запасной мыши (MOUSE) */
         combo_to_mouse {
             key-positions = <0 1>;
             layers = <0 1>;
@@ -40,20 +40,6 @@
     };
 
     behaviors {
-        adj1: adj1 {
-            compatible = "zmk,behavior-tap-dance";
-            label = "ADJ1";
-            #binding-cells = <0>;
-            bindings = <&bt BT_SEL 0>, <&bt BT_CLR>;
-        };
-
-        adj2: adj2 {
-            compatible = "zmk,behavior-tap-dance";
-            label = "ADJ2";
-            #binding-cells = <0>;
-            bindings = <&bt BT_NXT>, <&bt BT_CLR_ALL>;
-        };
-
         hold_mo_tap_mkp: hold_mo_tap_mkp {
             compatible = "zmk,behavior-hold-tap";
             label = "HOLD_MO_TAP_MKP";
@@ -79,11 +65,16 @@
     keymap {
         compatible = "zmk,keymap";
 
-        /* Слой 0 (SCROLL, старт): pos 0 (правая кнопка) = &to 0, pos 1 (левая кнопка) = &to 1 (TEXT) */
+        /* Слой 0 (SCROLL, старт):
+         * Верх: pos 0 (правая) = &to 0 (SCROLL), pos 1 (левая) = &to 1 (TEXT)
+         * Дно:  pos 2 (RC(0,5), внутренняя #3 ближе к центру) = Speed + (&tb_spd_up)
+         *       pos 3 (RC(0,4), внешняя #2 ближе к краю)      = Speed - (&tb_spd_dn)
+         * Удержание любой из нижних кнопок >= 800 мс = сброс на Пресет 3 (по умолчанию).
+         */
         scroll_base {
             bindings = <
-&to 0  &to 1
-&adj1  &adj2
+&to 0       &to 1
+&tb_spd_up  &tb_spd_dn
             >;
 
             display-name = "Scroll";
@@ -121,16 +112,28 @@
     };
 };
 
-&trackball { cpi = <1000>; };
+&trackball {
+    cpi = <1000>;
+    force-awake;
+    force-awake-4ms-mode;
+};
+
+&zip_scroll_snap {
+    x-threshold = <5 8>;
+    y-threshold = <1 1>;
+    require-n-samples = <5>;
+    immediate-snap-threshold = <16>;
+};
 
 &trackball_listener {
-    /* По умолчанию (Слой 0: SCROLL): плавный 2D-скролл */
+    /* По умолчанию (Слой 0: SCROLL): 16x USB Hi-Res плавный 2D-скролл со snap ДО делителя скорости */
     input-processors =
         <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
-        <&zip_xy_scaler 1 32>,
-        <&zip_xy_to_scroll_mapper &zip_scroll_snap>;
+        <&zip_xy_to_scroll_mapper>,
+        <&zip_scroll_snap>,
+        <&zip_tb_scroll_scaler>;
 
-    /* Слой 1 (TEXT): 4-позиционные стрелки с поглощением движения курсора */
+    /* Слой 1 (TEXT): 4-позиционные стрелки с динамическим порогом из активного пресета 1..5 */
     text {
         layers = <1>;
         input-processors = <&zip_xy_to_arrows &zip_xy_scaler 0 1>;

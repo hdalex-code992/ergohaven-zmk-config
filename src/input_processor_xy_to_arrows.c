@@ -14,6 +14,10 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/keycode_state_changed.h>
 
+#if IS_ENABLED(CONFIG_ZMK_TB_SPEED_CONTROL)
+#include "tb_speed.h"
+#endif
+
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
 struct xy_to_arrows_config {
@@ -25,6 +29,7 @@ struct xy_to_arrows_data {
     int32_t acc_x;
     int32_t acc_y;
     int64_t last_event_ms;
+    uint8_t last_preset;
 };
 
 K_MSGQ_DEFINE(xy_to_arrows_msgq, sizeof(uint32_t), 12, 4);
@@ -56,9 +61,6 @@ static K_WORK_DELAYABLE_DEFINE(xy_to_arrows_work, xy_to_arrows_work_cb);
 
 static void enqueue_arrow_tap(uint32_t kc) {
     if (k_msgq_put(&xy_to_arrows_msgq, &kc, K_NO_WAIT) == 0) {
-        /* k_work_schedule is a spinlock-atomic no-op if already DELAYED or QUEUED,
-         * and properly re-queues if the work callback is currently K_WORK_RUNNING
-         * and about to return after draining msgq. */
         k_work_schedule(&xy_to_arrows_work, K_NO_WAIT);
     }
 }
@@ -81,6 +83,18 @@ static int xy_to_arrows_handle_event(const struct device *dev, struct input_even
     struct xy_to_arrows_data *data = dev->data;
     int64_t now = k_uptime_get();
 
+#if IS_ENABLED(CONFIG_ZMK_TB_SPEED_CONTROL)
+    uint8_t cur_preset = tb_speed_get_preset();
+    int32_t thr = tb_speed_get_params()->text_threshold;
+    if (data->last_preset != cur_preset) {
+        data->acc_x = 0;
+        data->acc_y = 0;
+        data->last_preset = cur_preset;
+    }
+#else
+    int32_t thr = cfg->threshold > 0 ? cfg->threshold : 64;
+#endif
+
     if (cfg->idle_reset_ms > 0 && data->last_event_ms > 0 &&
         (now - data->last_event_ms) > cfg->idle_reset_ms) {
         data->acc_x = 0;
@@ -91,7 +105,7 @@ static int xy_to_arrows_handle_event(const struct device *dev, struct input_even
     int32_t delta = event->value;
     bool is_sync = event->sync;
     /* Consume both value and sync so zmk_input_listener does not transmit
-     * 83 Hz zero-delta BLE GATT mouse reports alongside arrow key taps. */
+     * zero-delta USB mouse reports alongside arrow key taps. */
     event->value = 0;
     event->sync = false;
 
@@ -111,7 +125,6 @@ static int xy_to_arrows_handle_event(const struct device *dev, struct input_even
         return ZMK_INPUT_PROC_CONTINUE;
     }
 
-    int32_t thr = cfg->threshold > 0 ? cfg->threshold : 36;
     int32_t ax = abs(data->acc_x);
     int32_t ay = abs(data->acc_y);
 
@@ -153,6 +166,7 @@ static int xy_to_arrows_init(const struct device *dev) {
     data->acc_x = 0;
     data->acc_y = 0;
     data->last_event_ms = 0;
+    data->last_preset = 3;
     return 0;
 }
 
@@ -163,7 +177,7 @@ static const struct zmk_input_processor_driver_api xy_to_arrows_driver_api = {
 #define XY_TO_ARROWS_INST(n)                                                                       \
     static struct xy_to_arrows_data xy_to_arrows_data_##n = {};                                    \
     static const struct xy_to_arrows_config xy_to_arrows_config_##n = {                            \
-        .threshold = DT_INST_PROP_OR(n, threshold, 36),                                            \
+        .threshold = DT_INST_PROP_OR(n, threshold, 64),                                            \
         .idle_reset_ms = DT_INST_PROP_OR(n, idle_reset_ms, 150),                                   \
     };                                                                                             \
     DEVICE_DT_INST_DEFINE(n, xy_to_arrows_init, NULL, &xy_to_arrows_data_##n,                      \

@@ -1,0 +1,23 @@
+description: Trackball 5-preset speed step / hold-reset behavior
+
+compatible: "zmk,behavior-tb-speed"
+
+properties:
+  "#binding-cells":
+    type: int
+    const: 0
+    description: "Zero runtime binding parameters"
+
+  display-name:
+    type: string
+    description: "Human-readable name for ZMK Studio"
+
+  direction:
+    type: int
+    required: true
+    description: "Step direction (+1 for faster, -1 for slower)"
+
+  hold-reset-ms:
+    type: int
+    default: 800
+    description: "Hold duration in ms to reset speed to Preset 3 (default)"

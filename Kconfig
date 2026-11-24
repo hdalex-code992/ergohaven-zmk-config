@@ -4,3 +4,11 @@ config ZMK_INPUT_PROCESSOR_XY_TO_ARROWS
 	depends on ZMK_POINTING
 	help
 	  Convert relative X/Y trackball motion into 4-way dominant-axis arrow key taps.
+
+config ZMK_TB_SPEED_CONTROL
+	bool "Persistent 5-Preset Trackball Scroll & Text Speed Controller"
+	default y
+	depends on ZMK_POINTING
+	select SETTINGS
+	help
+	  Persistent 5-preset speed scaler for smooth 2D scroll and 4-way text arrows.

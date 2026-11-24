@@ -1,0 +1,27 @@
+#pragma once
+
+/ {
+    /omit-if-no-ref/ zip_tb_scroll_scaler: zip_tb_scroll_scaler {
+        compatible = "zmk,input-processor-tb-scroll-scaler";
+        #input-processor-cells = <0>;
+        idle-reset-ms = <200>;
+    };
+
+    behaviors {
+        tb_spd_dn: tb_spd_dn {
+            compatible = "zmk,behavior-tb-speed";
+            display-name = "Speed -";
+            #binding-cells = <0>;
+            direction = <-1>;
+            hold-reset-ms = <800>;
+        };
+
+        tb_spd_up: tb_spd_up {
+            compatible = "zmk,behavior-tb-speed";
+            display-name = "Speed +";
+            #binding-cells = <0>;
+            direction = <1>;
+            hold-reset-ms = <800>;
+        };
+    };
+};

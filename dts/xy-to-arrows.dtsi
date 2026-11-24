@@ -4,7 +4,7 @@
     /omit-if-no-ref/ zip_xy_to_arrows: zip_xy_to_arrows {
         compatible = "zmk,input-processor-xy-to-arrows";
         #input-processor-cells = <0>;
-        threshold = <36>;
+        threshold = <64>;
         idle-reset-ms = <150>;
     };
 };

@@ -1,0 +1,14 @@
+description: Dynamic 5-preset smooth scroll speed scaler input processor
+
+compatible: "zmk,input-processor-tb-scroll-scaler"
+
+properties:
+  "#input-processor-cells":
+    type: int
+    const: 0
+    description: "Number of cells in input processor specifier"
+
+  idle-reset-ms:
+    type: int
+    default: 200
+    description: "Reset fractional remainders after idle timeout in ms"
